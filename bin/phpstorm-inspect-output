@@ -1,0 +1,77 @@
+#!/usr/bin/env php
+<?php
+
+if (file_exists(__DIR__ . '/../../../autoload.php')) {
+    // package is installed as dependency of some root project
+    require_once __DIR__ . '/../../../autoload.php';
+} else {
+    require_once __DIR__ . '/../vendor/autoload.php';
+}
+
+use ShopSys\PhpStormInspect\CheckstyleOutputPrinter;
+use ShopSys\PhpStormInspect\OutputPrinter;
+use ShopSys\PhpStormInspect\ProblemFactory;
+
+const FORMAT_TEXT = 'text';
+const FORMAT_CHECKSTYLE = 'checkstyle';
+
+/**
+ * @param string $path
+ *
+ * @return string
+ * @throws Exception
+ */
+function realpathWithCheck($path)
+{
+    $realpath = realpath($path);
+    if ($realpath === false) {
+        throw new \Exception(sprintf('Path %s not found', $path));
+    }
+
+    return $realpath;
+}
+
+/**
+ * @param string $format
+ *
+ * @return \ShopSys\PhpStormInspect\OutputPrinter
+ * @throws Exception
+ */
+function getOutputPrinter($format)
+{
+    switch ($format) {
+        case 'text':
+            return new OutputPrinter(new ProblemFactory());
+
+        case 'checkstyle':
+            return new CheckstyleOutputPrinter(new ProblemFactory());
+
+        default:
+            throw new \Exception(sprintf('Undefined format "%s"', $format));
+    }
+}
+
+try {
+    if ($argc !== 3) {
+        throw new \Exception(
+            "Expected 2arguments:\n"
+            . " <projectPath>\n"
+            . " <outputPath>\n"
+            . "\n"
+        );
+    }
+
+    $projectPath = realpathWithCheck($argv[1]);
+    $outputPath = realpathWithCheck($argv[2]);
+    $format = FORMAT_TEXT;
+
+    $outputPrinter = getOutputPrinter($format);
+    $returnCode = $outputPrinter->printOutput($projectPath, $outputPath);
+    $inspectionRunner->clearOutputDirectory($outputPath);
+
+    exit($returnCode);
+} catch (\Exception $ex) {
+    echo $ex->getMessage() . "\n";
+
+    exit(1);
+}
